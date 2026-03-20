@@ -1,0 +1,6 @@
+build/
+target/
+cmake-build-*/
+.cache/
+.git/
+*.engine
