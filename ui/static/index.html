@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>embed-images</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e4e4e7;
+    --text-muted: #8b8d98;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  header .badge {
+    background: var(--accent);
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* ── Config panel ─────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .panel h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  .field {
+    margin-bottom: 0.75rem;
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-family: inherit;
+  }
+
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .checkbox-field input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+  }
+
+  .checkbox-field label {
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  button.run {
+    width: 100%;
+    padding: 0.65rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background 0.15s;
+  }
+
+  button.run:hover { background: var(--accent-hover); }
+  button.run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Results area ─────────────────────────── */
+  .results {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Log */
+  .log-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-header h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .status-dot.running { background: var(--amber); animation: pulse 1s infinite; }
+  .status-dot.done { background: var(--green); }
+  .status-dot.error { background: var(--red); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  #log {
+    height: 200px;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  #log .line { white-space: pre-wrap; word-break: break-all; }
+  #log .line.cmd { color: var(--accent); }
+  #log .line.error { color: var(--red); }
+  #log .line.status { color: var(--green); }
+
+  /* Duplicates */
+  .dupes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .dupes-header h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .dupes-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .dupe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: 1rem;
+  }
+
+  .dupe-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .dupe-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dupe-images img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+  }
+
+  .dupe-info {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .dupe-score {
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dupe-score.high { color: var(--red); }
+  .dupe-score.medium { color: var(--amber); }
+
+  .dupe-names {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .dupe-names span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ── Responsive ─────────────────────────── */
+  @media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+    .dupe-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>embed-images</h1>
+    <span class="badge">TensorRT</span>
+  </header>
+
+  <div class="grid">
+    <!-- Config panel -->
+    <div class="panel">
+      <h2>Configuration</h2>
+
+      <div class="field">
+        <label>ONNX Model</label>
+        <input type="text" id="model" value="/workspace/model.onnx" />
+      </div>
+
+      <div class="field">
+        <label>Images Directory</label>
+        <input type="text" id="images_dir" value="/workspace/images" />
+      </div>
+
+      <div class="field">
+        <label>Output Directory</label>
+        <input type="text" id="output_dir" value="/workspace/output" />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Thumbnail Size</label>
+          <input type="number" id="thumbnail_size" value="224" />
+        </div>
+        <div class="field">
+          <label>Batch Size</label>
+          <input type="number" id="batch_size" value="32" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Output Format</label>
+        <select id="output_format">
+          <option value="npz" selected>NPZ</option>
+          <option value="json">JSON</option>
+        </select>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 1rem 0;">
+
+      <div class="checkbox-field">
+        <input type="checkbox" id="find_duplicates" checked />
+        <label for="find_duplicates">Find duplicates</label>
+      </div>
+
+      <div class="row" id="dupe-options">
+        <div class="field">
+          <label>Top K</label>
+          <input type="number" id="top_k" value="50" />
+        </div>
+        <div class="field">
+          <label>Threshold</label>
+          <input type="number" id="duplicate_threshold" value="0.9" step="0.01" />
+        </div>
+      </div>
+
+      <button class="run" id="run-btn" onclick="runPipeline()">Run Pipeline</button>
+    </div>
+
+    <!-- Results -->
+    <div class="results">
+      <div class="log-panel">
+        <div class="log-header">
+          <h2>Pipeline Log</h2>
+          <div class="status-dot" id="status-dot"></div>
+        </div>
+        <div id="log">
+          <div class="line status">Ready. Configure and click Run.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="dupes-header">
+          <h2>Duplicate Pairs</h2>
+          <span class="dupes-count" id="dupes-count"></span>
+        </div>
+        <div id="dupes-container">
+          <div class="empty-state">Run the pipeline with "Find duplicates" enabled to see results.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+let ws = null;
+
+function getConfig() {
+  return {
+    model: $('#model').value,
+    images_dir: $('#images_dir').value,
+    output_dir: $('#output_dir').value,
+    thumbnail_size: parseInt($('#thumbnail_size').value),
+    batch_size: parseInt($('#batch_size').value),
+    output_format: $('#output_format').value,
+    find_duplicates: $('#find_duplicates').checked,
+    top_k: parseInt($('#top_k').value),
+    duplicate_threshold: parseFloat($('#duplicate_threshold').value),
+  };
+}
+
+function appendLog(text, cls = '') {
+  const log = $('#log');
+  const div = document.createElement('div');
+  div.className = 'line' + (cls ? ' ' + cls : '');
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setStatus(state) {
+  const dot = $('#status-dot');
+  dot.className = 'status-dot ' + state;
+}
+
+function thumbUrl(originalPath) {
+  // Convert original path to thumbnail path
+  const outputDir = $('#output_dir').value;
+  const stem = originalPath.split('/').pop().replace(/\.[^.]+$/, '');
+  return `/files/output/thumbnails/${stem}_thumb.png`;
+}
+
+function renderDuplicates(duplicates) {
+  const container = $('#dupes-container');
+  $('#dupes-count').textContent = `${duplicates.length} pairs`;
+
+  if (!duplicates.length) {
+    container.innerHTML = '<div class="empty-state">No duplicate pairs found above threshold.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'dupe-grid';
+
+  for (const pair of duplicates) {
+    const sim = pair.cosine_similarity;
+    const scoreClass = sim >= 0.98 ? 'high' : sim >= 0.95 ? 'medium' : '';
+
+    const nameA = pair.image_a.split('/').pop();
+    const nameB = pair.image_b.split('/').pop();
+
+    const card = document.createElement('div');
+    card.className = 'dupe-card';
+    card.innerHTML = `
+      <div class="dupe-images">
+        <img src="${thumbUrl(pair.image_a)}" alt="${nameA}" loading="lazy" />
+        <img src="${thumbUrl(pair.image_b)}" alt="${nameB}" loading="lazy" />
+      </div>
+      <div class="dupe-info">
+        <div class="dupe-names">
+          <span title="${nameA}">${nameA}</span>
+          <span title="${nameB}">${nameB}</span>
+        </div>
+        <div class="dupe-score ${scoreClass}">${sim.toFixed(4)}</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  container.appendChild(grid);
+}
+
+function runPipeline() {
+  const btn = $('#run-btn');
+  btn.disabled = true;
+  btn.textContent = 'Running...';
+
+  $('#log').innerHTML = '';
+  setStatus('running');
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws/run`);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify(getConfig()));
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    switch (msg.type) {
+      case 'log':
+        appendLog(msg.message);
+        break;
+      case 'cmd':
+        appendLog('$ ' + msg.message, 'cmd');
+        break;
+      case 'status':
+        appendLog(msg.message, 'status');
+        break;
+      case 'error':
+        appendLog(msg.message, 'error');
+        setStatus('error');
+        btn.disabled = false;
+        btn.textContent = 'Run Pipeline';
+        break;
+      case 'complete':
+        appendLog(msg.message, 'status');
+        setStatus('done');
+        btn.disabled = false;
+        btn.textContent = 'Run Pipeline';
+        if (msg.duplicates) {
+          renderDuplicates(msg.duplicates);
+        }
+        break;
+    }
+  };
+
+  ws.onerror = () => {
+    appendLog('WebSocket connection error', 'error');
+    setStatus('error');
+    btn.disabled = false;
+    btn.textContent = 'Run Pipeline';
+  };
+
+  ws.onclose = () => {
+    btn.disabled = false;
+    btn.textContent = 'Run Pipeline';
+  };
+}
+
+// Toggle duplicate options visibility
+$('#find_duplicates').addEventListener('change', (e) => {
+  $('#dupe-options').style.display = e.target.checked ? 'grid' : 'none';
+});
+
+// Load existing results on page load
+fetch('/api/results')
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === 'complete' && data.duplicates.length) {
+      renderDuplicates(data.duplicates);
+      appendLog('Loaded previous results.', 'status');
+    }
+  })
+  .catch(() => {});
+</script>
+</body>
+</html>

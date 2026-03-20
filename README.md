@@ -1,6 +1,6 @@
 # embed-images
 
-CLI for image thumbnailing + TensorRT embedding extraction with duplicate detection.
+Image thumbnailing + TensorRT embedding extraction with duplicate detection. Includes a web UI for browsing results.
 
 ## Build
 
@@ -8,19 +8,23 @@ CLI for image thumbnailing + TensorRT embedding extraction with duplicate detect
 docker build -t embed-images .
 ```
 
-## Usage
+## Web UI
 
 ```bash
-docker run --gpus all -v /path/to/data:/workspace embed-images \
+docker run --gpus all -p 8000:8000 -v /path/to/data:/workspace embed-images
+```
+
+Open http://localhost:8000 — configure the pipeline, hit Run, and browse duplicate pairs side-by-side.
+
+## CLI
+
+```bash
+docker run --gpus all -v /path/to/data:/workspace embed-images cli \
   --model /workspace/clip-vit-b32-visual.onnx \
   --images-dir /workspace/images/ \
   --output-dir /workspace/output/ \
-  --thumbnail-size 224 \
-  --batch-size 32 \
-  --output-format npz \
   --find-duplicates \
-  --top-k 50 \
-  --duplicate-threshold 0.9
+  --top-k 50
 ```
 
 ### Options
