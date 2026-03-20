@@ -62,7 +62,8 @@ Engine Engine::build(const std::filesystem::path& onnx_path,
         auto builder = TrtUniquePtr<nvinfer1::IBuilder>(
             nvinfer1::createInferBuilder(eng.logger_));
         auto network = TrtUniquePtr<nvinfer1::INetworkDefinition>(
-            builder->createNetworkV2(0));
+            builder->createNetworkV2(1U << static_cast<uint32_t>(
+                nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH)));
         auto parser = TrtUniquePtr<nvonnxparser::IParser>(
             nvonnxparser::createParser(*network, eng.logger_));
 
@@ -73,6 +74,21 @@ Engine Engine::build(const std::filesystem::path& onnx_path,
 
         auto config = TrtUniquePtr<nvinfer1::IBuilderConfig>(builder->createBuilderConfig());
         config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 1ULL << 30);
+
+        // Add optimization profile for dynamic batch dimension
+        auto profile = builder->createOptimizationProfile();
+        for (int32_t i = 0; i < network->getNbInputs(); ++i) {
+            auto input = network->getInput(i);
+            auto dims = input->getDimensions();
+            // Set min/opt/max for batch dimension (dim 0)
+            auto min_dims = dims; min_dims.d[0] = 1;
+            auto opt_dims = dims; opt_dims.d[0] = 32;
+            auto max_dims = dims; max_dims.d[0] = 64;
+            profile->setDimensions(input->getName(), nvinfer1::OptProfileSelector::kMIN, min_dims);
+            profile->setDimensions(input->getName(), nvinfer1::OptProfileSelector::kOPT, opt_dims);
+            profile->setDimensions(input->getName(), nvinfer1::OptProfileSelector::kMAX, max_dims);
+        }
+        config->addOptimizationProfile(profile);
 
         if (fp16 && builder->platformHasFastFp16()) {
             spdlog::info("Enabling FP16 precision");

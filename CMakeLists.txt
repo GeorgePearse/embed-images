@@ -65,6 +65,7 @@ target_include_directories(embed-images PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${TENSORRT_INCLUDE_DIR}
     ${CUDA_INCLUDE_DIRS}
+    ${cnpy_SOURCE_DIR}
 )
 
 target_link_libraries(embed-images PRIVATE
